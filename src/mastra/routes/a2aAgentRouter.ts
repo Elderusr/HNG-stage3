@@ -1,16 +1,19 @@
 import { registerApiRoute } from '@mastra/core/server';
 import { randomUUID } from 'crypto';
 
-export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
+export const a2aAgentRoute = registerApiRoute('/a2a/:agentId', {
   method: 'POST',
   handler: async (c) => {
+    let requestId = null;
+    
     try {
       const mastra = c.get('mastra');
       const agentId = c.req.param('agentId');
 
       // Parse JSON-RPC 2.0 request
       const body = await c.req.json();
-      const { jsonrpc, id: requestId, method, params } = body;
+      const { jsonrpc, id, method, params } = body;
+      requestId = id;
 
       // Validate JSON-RPC 2.0 format
       if (jsonrpc !== '2.0' || !requestId) {
@@ -72,12 +75,8 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
         };
       });
 
-      // Execute agent with proper format - FIXED: wrap in object with messages key
-      const response = await agent.generate({
-        messages: mastraMessages,
-        ...(contextId && { contextId }),
-        ...(metadata && { metadata })
-      });
+      // Execute agent - agent.generate() accepts array of messages directly
+      const response = await agent.generate(mastraMessages);
 
       const agentText = response.text || '';
 
@@ -143,10 +142,9 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
         }
       });
     } catch (error: any) {
-      const body = await c.req.json().catch(() => ({}));
       return c.json({
         jsonrpc: '2.0',
-        id: body.id || null,
+        id: requestId,
         error: {
           code: -32603,
           message: error.message || 'Internal error',
