@@ -81,7 +81,7 @@ export const a2aAgentRoute = registerApiRoute('/a2a/:agentId', {
       const agentText = response.text || '';
 
       // Build artifacts array
-      const artifacts = [
+      const artifacts : any = [
         {
           artifactId: randomUUID(),
           name: `${agentId}Response`,
