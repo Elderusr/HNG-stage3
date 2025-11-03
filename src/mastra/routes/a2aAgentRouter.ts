@@ -4,16 +4,13 @@ import { randomUUID } from 'crypto';
 export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
   method: 'POST',
   handler: async (c) => {
-    let requestId = null;
-    
     try {
       const mastra = c.get('mastra');
       const agentId = c.req.param('agentId');
 
       // Parse JSON-RPC 2.0 request
       const body = await c.req.json();
-      const { jsonrpc, id, method, params } = body;
-      requestId = id;
+      const { jsonrpc, id: requestId, method, params } = body;
 
       // Validate JSON-RPC 2.0 format
       if (jsonrpc !== '2.0' || !requestId) {
@@ -41,7 +38,7 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
 
       // Extract messages from params
       const { message, messages, contextId, taskId, metadata } = params || {};
-      
+
       let messagesList = [];
       if (message) {
         messagesList = [message];
@@ -49,35 +46,18 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
         messagesList = messages;
       }
 
-      // Validate we have messages
-      if (messagesList.length === 0) {
-        return c.json({
-          jsonrpc: '2.0',
-          id: requestId,
-          error: {
-            code: -32602,
-            message: 'Invalid params: message or messages array is required'
-          }
-        }, 400);
-      }
-
       // Convert A2A messages to Mastra format
-      const mastraMessages = messagesList.map((msg) => {
-        const content = msg.parts?.map((part: any) => {
+      const mastraMessages = messagesList.map((msg) => ({
+        role: msg.role,
+        content: msg.parts?.map((part : any) => {
           if (part.kind === 'text') return part.text;
           if (part.kind === 'data') return JSON.stringify(part.data);
           return '';
-        }).join('\n') || msg.content || '';
+        }).join('\n') || ''
+      }));
 
-        return {
-          role: msg.role || 'user',
-          content: content
-        };
-      });
-
-      // Execute agent - agent.generate() accepts array of messages directly
+      // Execute agent
       const response = await agent.generate(mastraMessages);
-
       const agentText = response.text || '';
 
       // Build artifacts array
@@ -105,8 +85,8 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
       const history = [
         ...messagesList.map((msg) => ({
           kind: 'message',
-          role: msg.role || 'user',
-          parts: msg.parts || [{ kind: 'text', text: msg.content || '' }],
+          role: msg.role,
+          parts: msg.parts,
           messageId: msg.messageId || randomUUID(),
           taskId: msg.taskId || taskId || randomUUID(),
         })),
@@ -141,17 +121,15 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
           kind: 'task'
         }
       });
-    } catch (error: any) {
+
+    } catch (error : any) {
       return c.json({
         jsonrpc: '2.0',
-        id: requestId,
+        id: null,
         error: {
           code: -32603,
-          message: error.message || 'Internal error',
-          data: { 
-            stack: error.stack,
-            details: error.message 
-          }
+          message: 'Internal error',
+          data: { details: error.message }
         }
       }, 500);
     }
