@@ -3,6 +3,7 @@ import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
 import { devilsAdvocateAgent } from './agents/devilAdvocateAgent';
+import { a2aAgentRoute } from './routes/a2aAgentRouter';
 
 import { toolCallAppropriatenessScorer, completenessScorer, competitorResearchScorer } from './scorers/devilsAdvocateScorer';
 
@@ -25,4 +26,11 @@ export const mastra = new Mastra({
     // Enables DefaultExporter and CloudExporter for AI tracing
     default: { enabled: true }, 
   },
+  server: {
+    build: {
+      openAPIDocs: true,
+      swaggerUI: true,
+    },
+    apiRoutes: [a2aAgentRoute]
+  }
 });
