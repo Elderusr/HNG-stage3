@@ -34,7 +34,7 @@ export const webSearch = createTool({
             const { results } = await exa.search(
                 context.query,
                 {
-                    numResults: 10,
+                    numResults: 3,
                 }
             );
 
