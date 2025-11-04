@@ -31,21 +31,26 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
               state: 'completed',
               timestamp: new Date().toISOString(),
               message: {
-                messageId: randomUUID(),
+                kind: 'message',
                 role: 'agent',
                 parts: [
                   {
                     kind: 'text',
-                    text: 'No message provided'
+                    text: 'No message provided',
+                    data: null,
+                    file_url: null
                   }
                 ],
-                kind: 'message'
+                messageId: randomUUID(),
+                taskId: null,
+                metadata: null
               }
             },
             artifacts: [],
             history: [],
             kind: 'task'
-          }
+          },
+          error: null
         }, 200);
       }
 
@@ -171,12 +176,17 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
       const finalTaskId = taskId || randomUUID();
       const finalContextId = contextId || randomUUID();
 
-      // Build artifacts array
+      // Build artifacts array with complete part structure
       const artifacts: any[] = [
         {
           artifactId: randomUUID(),
           name: `${agentId}Response`,
-          parts: [{ kind: 'text', text: agentText }]
+          parts: [{ 
+            kind: 'text', 
+            text: agentText,
+            data: null,
+            file_url: null
+          }]
         }
       ];
 
@@ -187,30 +197,49 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
           name: 'ToolResults',
           parts: response.toolResults.map((result) => ({
             kind: 'data',
-            data: result
+            data: result,
+            text: null,
+            file_url: null
           }))
         });
       }
 
-      // Build conversation history
+      // Build conversation history with complete structure
       const history = [
-        ...messagesList.map((msg) => ({
-          kind: 'message',
-          role: msg.role || 'user',
-          parts: msg.parts || [{ kind: 'text', text: msg.content || '' }],
-          messageId: msg.messageId || randomUUID(),
-          taskId: msg.taskId || finalTaskId,
-        })),
+        ...messagesList.map((msg, index) => {
+          // Normalize parts structure
+          const normalizedParts = (msg.parts || [{ kind: 'text', text: msg.content || '' }]).map((part: any) => ({
+            kind: part.kind || 'text',
+            text: part.text || null,
+            data: part.data || null,
+            file_url: part.file_url || null
+          }));
+
+          return {
+            kind: 'message',
+            role: msg.role || 'user',
+            parts: normalizedParts,
+            messageId: msg.messageId || randomUUID(),
+            taskId: index === 0 ? null : (msg.taskId || finalTaskId), // First user message has null taskId
+            metadata: msg.metadata || null
+          };
+        }),
         {
           kind: 'message',
           role: 'agent',
-          parts: [{ kind: 'text', text: agentText }],
+          parts: [{ 
+            kind: 'text', 
+            text: agentText,
+            data: null,
+            file_url: null
+          }],
           messageId: randomUUID(),
           taskId: finalTaskId,
+          metadata: null
         }
       ];
 
-      // Return A2A-compliant response
+      // Return A2A-compliant response with error field
       return c.json({
         jsonrpc: '2.0',
         id: requestId,
@@ -221,16 +250,24 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
             state: 'completed',
             timestamp: new Date().toISOString(),
             message: {
-              messageId: randomUUID(),
+              kind: 'message',
               role: 'agent',
-              parts: [{ kind: 'text', text: agentText }],
-              kind: 'message'
+              parts: [{ 
+                kind: 'text', 
+                text: agentText,
+                data: null,
+                file_url: null
+              }],
+              messageId: randomUUID(),
+              taskId: finalTaskId,
+              metadata: null
             }
           },
           artifacts,
           history,
           kind: 'task'
-        }
+        },
+        error: null
       }, 200);
 
     } catch (error: any) {
