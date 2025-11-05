@@ -54,7 +54,7 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
         }, 200);
       }
 
-      const { jsonrpc, id, method, params } = body;
+      const { jsonrpc, id, params } = body;
       requestId = id;
 
       // Validate JSON-RPC 2.0 format
@@ -105,7 +105,7 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
         }, 400);
       }
 
-      const { message, messages, contextId, taskId, metadata, configuration } = params;
+      const { message, messages, contextId, taskId } = params;
 
       // Extract messages from params
       let messagesList = [];
