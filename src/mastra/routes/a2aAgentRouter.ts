@@ -105,7 +105,7 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
         }, 400);
       }
 
-      const { message, messages, contextId, taskId } = params;
+      const { message, messages, contextId, taskId, metadata, configuration } = params;
 
       // Extract messages from params
       let messagesList = [];
@@ -177,7 +177,7 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
       const finalContextId = contextId || randomUUID();
 
       // Build artifacts array with complete part structure
-      const artifacts: any[] = [
+      const artifacts: any = [
         {
           artifactId: randomUUID(),
           name: `${agentId}Response`,
